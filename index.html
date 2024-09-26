@@ -74,11 +74,11 @@
             left: 50%;
             transform: translate(-50%, -50%);
             font-size: 2.5rem;
-            color: #000000; /* Texte noir */
+            color: #000000;
             font-family: 'RetroGame', Arial, sans-serif;
-            text-shadow: 2px 2px #ff0000, -2px -2px #00ff00; /* Ombre rétro vert/rouge */
-            letter-spacing: 2px; /* Espacement des lettres pour un effet rétro */
-            background-color: #ffffff; /* Fond blanc pour contraste */
+            text-shadow: 2px 2px #ff0000, -2px -2px #00ff00;
+            letter-spacing: 2px;
+            background-color: #ffffff;
             padding: 10px;
             border-radius: 8px;
             text-align: center;
@@ -150,7 +150,9 @@
 
         function createCactus() {
             const currentTime = Date.now();
-            if (currentTime - lastCactusTime < 1000) return;
+            const randomSpawnTime = Math.random() * 500 + 500; // Temps d'apparition entre 500ms et 1000ms
+
+            if (currentTime - lastCactusTime < randomSpawnTime) return;
 
             const cactus = document.createElement("div");
             cactus.innerText = "🌵";
@@ -160,6 +162,8 @@
             lastCactusTime = currentTime;
 
             let cactusPosition = 0;
+            const randomSpeed = Math.random() * 5 + 10; // Vitesse de 10 à 15
+
             const cactusIntervalId = setInterval(function() {
                 if (cactusPosition > game.offsetWidth) {
                     clearInterval(cactusIntervalId);
@@ -167,7 +171,7 @@
                     score++;
                     scoreDisplay.innerText = "Score: " + score;
                 } else {
-                    cactusPosition += 12;
+                    cactusPosition += randomSpeed;
                     cactus.style.right = cactusPosition + "px";
 
                     const dinoRect = dino.getBoundingClientRect();

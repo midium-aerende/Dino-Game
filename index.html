@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu Dino</title>
+    <style>
+        @font-face {
+            font-family: 'RetroGame';
+            src: url('https://fonts.cdnfonts.com/s/9461/PressStart2P-Regular.woff') format('woff');
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #121212;
+            font-family: Arial, sans-serif;
+            color: #ffffff;
+        }
+
+        #game {
+            position: relative;
+            width: 80vw;
+            max-width: 600px;
+            height: 30vh;
+            max-height: 240px;
+            border: 2px solid #ffffff;
+            overflow: hidden;
+            background-color: #1e1e1e;
+        }
+
+        #dino {
+            display: grid;
+            position: absolute;
+            bottom: .5rem;
+            left: 1rem;
+            width: 1.5rem;
+            height: 2rem;
+            font-size: 2rem;
+            text-align: center;
+            justify-content: center;
+            transform: scaleX(-1);
+        }
+
+        .cactus {
+            display: grid;
+            position: absolute;
+            bottom: .5rem;
+            width: 1rem;
+            height: 2rem;
+            font-size: 2rem;
+            text-align: center;
+            justify-content: center;
+        }
+
+        #score, #high-score {
+            position: absolute;
+            top: .5rem;
+            left: .5rem;
+            font-size: 1rem;
+        }
+
+        #high-score {
+            top: 2rem;
+        }
+
+        #game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.5rem;
+            color: #000000; /* Texte noir */
+            font-family: 'RetroGame', Arial, sans-serif;
+            text-shadow: 2px 2px #ff0000, -2px -2px #00ff00; /* Ombre rétro vert/rouge */
+            letter-spacing: 2px; /* Espacement des lettres pour un effet rétro */
+            background-color: #ffffff; /* Fond blanc pour contraste */
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="game">
+        <div id="dino">🦖</div>
+        <div id="score">Score: 0</div>
+        <div id="high-score">High Score: 0</div>
+        <div id="game-over">JEU TERMINÉ!</div>
+    </div>
+    <script>
+        const dino = document.getElementById("dino");
+        const game = document.getElementById("game");
+        const scoreDisplay = document.getElementById("score");
+        const highScoreDisplay = document.getElementById("high-score");
+        const gameOverDisplay = document.getElementById("game-over");
+
+        let score = 0;
+        let highScore = 0;
+        let isJumping = false;
+        let isGameOver = false;
+        let cactusInterval;
+        let lastCactusTime = 0;
+
+        if (localStorage.getItem("highScore")) {
+            highScore = parseInt(localStorage.getItem("highScore"));
+            highScoreDisplay.innerText = "High Score: " + highScore;
+        }
+
+        document.addEventListener("click", function() {
+            if (!isGameOver) {
+                jump();
+            } else {
+                resetGame();
+            }
+        });
+
+        function jump() {
+            if (isJumping) return;
+            isJumping = true;
+            let jumpHeight = 0;
+            const maxJumpHeight = 130;
+            const jumpInterval = setInterval(function() {
+                if (jumpHeight >= maxJumpHeight) {
+                    clearInterval(jumpInterval);
+                    fall();
+                } else {
+                    jumpHeight += 10;
+                    dino.style.bottom = (5 + (jumpHeight / game.offsetHeight * 100)) + "%";
+                }
+            }, 15);
+        }
+
+        function fall() {
+            const fallInterval = setInterval(function() {
+                let currentBottom = parseFloat(dino.style.bottom);
+                if (currentBottom <= 5) {
+                    clearInterval(fallInterval);
+                    dino.style.bottom = ".5rem";
+                    isJumping = false;
+                } else {
+                    dino.style.bottom = (currentBottom - (5 / game.offsetHeight * 100)) + "%";
+                }
+            }, 15);
+        }
+
+        function createCactus() {
+            const currentTime = Date.now();
+            if (currentTime - lastCactusTime < 1000) return;
+
+            const cactus = document.createElement("div");
+            cactus.innerText = "🌵";
+            cactus.classList.add("cactus");
+            cactus.style.right = "0px";
+            game.appendChild(cactus);
+            lastCactusTime = currentTime;
+
+            let cactusPosition = 0;
+            const cactusIntervalId = setInterval(function() {
+                if (cactusPosition > game.offsetWidth) {
+                    clearInterval(cactusIntervalId);
+                    game.removeChild(cactus);
+                    score++;
+                    scoreDisplay.innerText = "Score: " + score;
+                } else {
+                    cactusPosition += 12;
+                    cactus.style.right = cactusPosition + "px";
+
+                    const dinoRect = dino.getBoundingClientRect();
+                    const cactusRect = cactus.getBoundingClientRect();
+
+                    if (
+                        dinoRect.left < cactusRect.right &&
+                        dinoRect.right > cactusRect.left &&
+                        dinoRect.top < cactusRect.bottom &&
+                        dinoRect.bottom > cactusRect.top
+                    ) {
+                        endGame();
+                    }
+                }
+            }, 30);
+        }
+
+        function endGame() {
+            isGameOver = true;
+            gameOverDisplay.style.display = "block";
+
+            clearInterval(cactusInterval);
+            stopAllCacti();
+
+            if (score > highScore) {
+                highScore = score;
+                highScoreDisplay.innerText = "High Score: " + highScore;
+                localStorage.setItem("highScore", highScore);
+            }
+        }
+
+        function stopAllCacti() {
+            const cacti = document.querySelectorAll(".cactus");
+            cacti.forEach(cactus => {
+                game.removeChild(cactus);
+            });
+        }
+
+        function resetGame() {
+            isGameOver = false;
+            score = 0;
+            scoreDisplay.innerText = "Score: 0";
+            gameOverDisplay.style.display = "none";
+
+            dino.style.bottom = ".5rem";
+
+            const cacti = document.querySelectorAll(".cactus");
+            cacti.forEach(cactus => game.removeChild(cactus));
+
+            cactusInterval = setInterval(createCactus, 1000);
+        }
+
+        cactusInterval = setInterval(createCactus, 1000);
+    </script>
+</body>
+</html>

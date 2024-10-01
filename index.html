@@ -9,6 +9,10 @@
             font-family: 'RetroGame';
             src: url('https://fonts.cdnfonts.com/s/9461/PressStart2P-Regular.woff') format('woff');
         }
+        
+        *{
+          user-select: none;
+        }
 
         body {
             display: flex;
@@ -26,7 +30,7 @@
             width: 80vw;
             max-width: 600px;
             height: 30vh;
-            max-height: 240px;
+            max-height: 300px;
             border: 2px solid #ffffff;
             overflow: hidden;
             background-color: #1e1e1e;
@@ -36,7 +40,7 @@
             display: grid;
             position: absolute;
             bottom: .5rem;
-            left: 1rem;
+            left: 1.5rem;
             width: 1.5rem;
             height: 2rem;
             font-size: 2rem;
@@ -56,15 +60,45 @@
             justify-content: center;
         }
 
-        #score, #high-score {
+        .cloud {
+      
+            display: grid;
             position: absolute;
-            top: .5rem;
+            top: 1rem;
+            width: 2rem;
+            height: 2rem;
+            font-size: 2rem;
+            text-align: center;
+            justify-content: center;
+        }
+
+        .coin {
+            display: grid;
+            position: absolute;
+            bottom: 2rem;
+            width: 1rem;
+            height: 1rem;
+            font-size: 1.5rem;
+            text-align: center;
+            justify-content: center;
+        }
+
+        #score, #high-score, #coin-count {
+            position: absolute;
+            top: 2rem;
             left: .5rem;
             font-size: 1rem;
+            z-index: 1000;
         }
 
         #high-score {
-            top: 2rem;
+            top: .5rem;
+        }
+
+        #coin-count {
+            right: .5rem;
+            top: .5rem;
+            text-align: right;
         }
 
         #game-over {
@@ -83,6 +117,21 @@
             border-radius: 8px;
             text-align: center;
         }
+
+        #play-button {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2rem;
+            color: #000000;
+            padding: 10px 20px;
+            background-color: #ffffff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -90,32 +139,60 @@
         <div id="dino">🦖</div>
         <div id="score">Score: 0</div>
         <div id="high-score">High Score: 0</div>
+        <div id="coin-count">Coins: <span id="coins">0</span> 💎</div>
         <div id="game-over">JEU TERMINÉ!</div>
+        <button id="play-button">COMMENCER!</button>
     </div>
     <script>
         const dino = document.getElementById("dino");
         const game = document.getElementById("game");
         const scoreDisplay = document.getElementById("score");
         const highScoreDisplay = document.getElementById("high-score");
+        const coinCountDisplay = document.getElementById("coins");
         const gameOverDisplay = document.getElementById("game-over");
+        const playButton = document.getElementById("play-button");
 
         let score = 0;
         let highScore = 0;
+        let coins = 0;
         let isJumping = false;
         let isGameOver = false;
         let cactusInterval;
-        let lastCactusTime = 0;
+        let cloudInterval;
+        let coinIntervalId;
+        let rand = 0;
+        let coinPosition = -200;
+        
+        setInterval(function() {
+          rand = (Math.floor(Math.random() * 4) * 800);
+        }, 800);
 
         if (localStorage.getItem("highScore")) {
             highScore = parseInt(localStorage.getItem("highScore"));
             highScoreDisplay.innerText = "High Score: " + highScore;
         }
 
-        document.addEventListener("click", function() {
-            if (!isGameOver) {
-                jump();
-            } else {
+        function startGame() {
+            if (isGameOver) {
                 resetGame();
+            } else {
+                jump();
+            }
+
+            if (!cactusInterval && !cloudInterval ) {
+                cactusInterval = setInterval(createCactus, 800);
+                cloudInterval = setInterval(createCloud, 400);
+                coinIntervalId = setInterval(createCoin, 800 * 2 + rand);
+            }
+
+            playButton.style.display = "none";
+        }
+
+        playButton.addEventListener("click", startGame);
+
+        document.addEventListener("click", function(event) {
+            if (event.target !== playButton) {
+                startGame();
             }
         });
 
@@ -147,31 +224,26 @@
                 }
             }, 15);
         }
+        
+        const randomSpeed = Math.floor(Math.random() * 3) + 10;
 
         function createCactus() {
-            const currentTime = Date.now();
-            const randomSpawnTime = Math.random() * 500 + 500; // Temps d'apparition entre 500ms et 1000ms
-
-            if (currentTime - lastCactusTime < randomSpawnTime) return;
-
             const cactus = document.createElement("div");
             cactus.innerText = "🌵";
             cactus.classList.add("cactus");
             cactus.style.right = "0px";
             game.appendChild(cactus);
-            lastCactusTime = currentTime;
 
             let cactusPosition = 0;
-            const randomSpeed = Math.random() * 5 + 10; // Vitesse de 10 à 15
 
             const cactusIntervalId = setInterval(function() {
-                if (cactusPosition > game.offsetWidth) {
+                if (cactusPosition > game.offsetWidth - 10) {
                     clearInterval(cactusIntervalId);
                     game.removeChild(cactus);
                     score++;
                     scoreDisplay.innerText = "Score: " + score;
                 } else {
-                    cactusPosition += randomSpeed;
+                    cactusPosition += randomSpeed + (score / 10);
                     cactus.style.right = cactusPosition + "px";
 
                     const dinoRect = dino.getBoundingClientRect();
@@ -189,12 +261,78 @@
             }, 30);
         }
 
+        function createCloud() {
+            const cloud = document.createElement("div");
+            cloud.innerText = "☁️";
+            cloud.classList.add("cloud");
+            cloud.style.right = "-2rem";
+            cloud.style.top = Math.random() * 30 + "px";
+            
+            game.appendChild(cloud);
+            
+            let cloudPosition = -200;
+            
+            const cloudInterval = setInterval(function() {
+              if (cloudPosition > game.offsetWidth - 10) {
+              clearInterval(cloudInterval);
+              game.removeChild(cloud);
+            }
+              else {
+              cloudPosition += randomSpeed + (score / 10);
+              cloud.style.right = cloudPosition + "px";
+            }
+            }, 30);
+        }
+
+        function createCoin() {
+            const coin = document.createElement("div");
+            coin.innerText = "💎";
+            coin.classList.add("coin");
+            coin.style.right = "-2rem";
+            coin.style.bottom = "1rem";
+            
+            game.appendChild(coin);
+            
+            cactusPosition = 0;
+
+            let coinPosition = -160;
+
+            const coinIntervalId = setInterval(function() {
+                if (coinPosition > game.offsetWidth - 10) {
+                    clearInterval(coinIntervalId);
+                    game.removeChild(coin);
+                } else {
+                    coinPosition += randomSpeed + (score / 10);
+                    coin.style.right = coinPosition + "px";
+
+                    const dinoRect = dino.getBoundingClientRect();
+                    const coinRect = coin.getBoundingClientRect();
+
+                    if (
+                        dinoRect.left < coinRect.right &&
+                        dinoRect.right > coinRect.left &&
+                        dinoRect.top < coinRect.bottom &&
+                        dinoRect.bottom > coinRect.top
+                    ) {
+                        coins++;
+                        coinCountDisplay.innerText = coins;
+                        clearInterval(coinIntervalId);
+                        game.removeChild(coin);
+                      localStorage.setItem("coins", coins);
+                    }
+                }
+            }, 30);
+        }
+
         function endGame() {
             isGameOver = true;
             gameOverDisplay.style.display = "block";
 
             clearInterval(cactusInterval);
-            stopAllCacti();
+            clearInterval(cloudInterval);
+            clearInterval(coinIntervalId);
+            
+            stopAllCactiAndClouds();
 
             if (score > highScore) {
                 highScore = score;
@@ -203,28 +341,41 @@
             }
         }
 
-        function stopAllCacti() {
+        function stopAllCactiAndClouds() {
             const cacti = document.querySelectorAll(".cactus");
             cacti.forEach(cactus => {
-                game.removeChild(cactus);
+              game.removeChild(cactus);
+            });
+
+            const clouds = document.querySelectorAll(".cloud");
+            clouds.forEach(cloud => {
+              game.removeChild(cloud);
+            });
+
+            const coins = document.querySelectorAll(".coin");
+            coins.forEach(coin => {
+              game.removeChild(coin);
             });
         }
 
         function resetGame() {
             isGameOver = false;
             score = 0;
+            coins = 0;
             scoreDisplay.innerText = "Score: 0";
+            coinCountDisplay.innerText = coins;
             gameOverDisplay.style.display = "none";
 
             dino.style.bottom = ".5rem";
 
-            const cacti = document.querySelectorAll(".cactus");
-            cacti.forEach(cactus => game.removeChild(cactus));
+            stopAllCactiAndClouds();
 
-            cactusInterval = setInterval(createCactus, 1000);
+            cactusInterval = setInterval(createCactus, 800);
+            cloudInterval = setInterval(createCloud, 400);
+            coinIntervalId = setInterval(createCoin, 800 * 2 + rand );
         }
 
-        cactusInterval = setInterval(createCactus, 1000);
+        playButton.style.display = "block";
     </script>
 </body>
 </html>
